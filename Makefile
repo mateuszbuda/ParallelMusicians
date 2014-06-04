@@ -5,9 +5,8 @@ TARGET=prlab4
 FILES=main.o
 SOURCE=main.c
 HOSTFILE=hosts
-N=4
-K=3
-MAP_FILE=./mapa
+N=6
+POS_FILE=./pozycje
 
 ${TARGET}: ${FILES}
 	${CC} -o ${TARGET} ${FILES} ${L_FLAGS}
@@ -18,7 +17,7 @@ ${FILES}: ${SOURCE}
 .PHONY: clean run
 
 run:
-	mpirun --hostfile ${HOSTFILE} ./${TARGET} ${N} ${K} ${MAP_FILE}
+	mpirun --hostfile ${HOSTFILE} ./${TARGET} ${N} ${POS_FILE}
 	
 clean:
 	-rm -f ${FILES} ${TARGET}
