@@ -21,4 +21,5 @@ run:
 	
 clean:
 	-rm -f ${FILES} ${TARGET}
- 
+nompi: main.c
+	gcc -Wall -o main main.c
