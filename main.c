@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <math.h>
-//#include "mpi.h" 
+#include "mpi.h" 
 #define ERR(source) (fprintf(stderr,"%s:%d\n",__FILE__,__LINE__),\
                      perror(source),kill(0,SIGKILL),\
                          exit(EXIT_FAILURE))
@@ -57,13 +57,13 @@ double distance(pos* a, pos* b) {
 }
 
 int main(int argc, char* argv[]) {
-	int rank, size, i, j, k, l, total;
+	int rank, size, i, j, k, l, total, neighbours;
 	pos* position;
 	int count;
 	double dist;
 	int* index, *edges;
 
-	read_file(argv[1], &position, &count);
+	read_file(argv[2], &position, &count);
 
 	if( (index = (int*) calloc(count, sizeof(int))) == NULL) {
 		ERR("calloc");
@@ -74,10 +74,7 @@ int main(int argc, char* argv[]) {
 	}
 	
 	k = 0;
-	l = 0;
-	total = 0;
-	for(i = 0; i < count; ++i) {
-		printf("(%d, %d)\n", position[i].x, position[i].y);
+	l = 0; total = 0; for(i = 0; i < count; ++i) { printf("(%d, %d)\n", position[i].x, position[i].y);
 		for(j = 0; j < count; ++j) {
 			if(j != i) {
 				dist = distance(&position[i], &position[j]);
@@ -89,7 +86,6 @@ int main(int argc, char* argv[]) {
 			}
 		}
 		index[l++] = total;
-		total = 0;
 	}
 	
 	for(i = 0; i < count; ++i) {
@@ -101,15 +97,25 @@ int main(int argc, char* argv[]) {
 		printf("edges[%d] = %d\n", i, edges[i]);
 		if(j == index[k]) {
 			printf("-----------------------\n");
-			j = 0;
 			++k;
 		}
 	}
+	MPI_Comm graph_comm;
 	/* Initialize the environment */
 	MPI_Init( &argc, &argv );
 	MPI_Comm_rank( MPI_COMM_WORLD, &rank );
 	MPI_Comm_size( MPI_COMM_WORLD, &size );
 
+	MPI_Graph_create(MPI_COMM_WORLD, count, index, edges, 0, &graph_comm);
+	MPI_Comm_rank(graph_comm, &rank);
+	
+	MPI_Graph_neighbors_count(graph_comm, rank, &neighbours);
+	printf("Jankiel#%d is playing his wonderful song!\n", rank);
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	if(rank == 0) {
+		printf("All done!\n");
+	}
 	MPI_Finalize();
 	return 0;
 }
