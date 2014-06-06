@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <math.h>
+#include <time.h>
 #include "mpi.h" 
 #define ERR(source) (fprintf(stderr,"%s:%d\n",__FILE__,__LINE__),\
                      perror(source),kill(0,SIGKILL),\
@@ -54,6 +55,45 @@ close:
 
 double distance(pos* a, pos* b) {
 	return sqrt( (double) ((a->x - b->x) * (a->x - b->x)) + (double)( (a->y - b->y) * (a->y - b->y)) );
+}
+
+
+int coloring(int vertex, int *neighs, int n_cnt)
+{
+	int c = 0, w;
+	int *neighs_cols;
+	int i;
+	
+	if (0 == n_cnt)
+		return 1;
+
+	srand(time(0));
+	neighs_cols = (int *) calloc(n_cnt, sizeof(int));
+	
+	while (!c)
+	{
+		c = 1 + (rand() % (n_cnt + 1));
+		
+		for (i = 0; i < n_cnt; i++)
+			//send c to neighs[i];
+		
+		for (i = 0; i < n_cnt; i++)
+			//neighs_cols[i] = receive from neighs[i]
+		
+		if ((w = distinct_color(v, neighs_cols, n_cnt) >= 0 && neighs[w] <= vertex)
+			v = 0;
+	}
+}
+
+int distinct_color(int v, int *cols, int n_cnt)
+{
+	int i;
+
+	for (i = 0; i < n_cnt; i++)
+		if (v == cols[i])
+			return i;
+	
+	return -1;
 }
 
 int main(int argc, char* argv[]) {
@@ -110,8 +150,17 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_rank(graph_comm, &rank);
 	
 	MPI_Graph_neighbors_count(graph_comm, rank, &neighbours);
-	printf("Jankiel#%d is playing his wonderful song!\n", rank);
+	
+	//int round = coloring(rank, neighbours, neighbours_count)
+	
+	for (i = 1; i <= neighbours; i++)
+	{
+		if (round == i)
+			printf("Jankiel#%d is playing his wonderful song!\n", rank);
 
+		MPI_Barrier(MPI_COMM_WORLD);
+	}
+	
 	MPI_Barrier(MPI_COMM_WORLD);
 	if(rank == 0) {
 		printf("All done!\n");
