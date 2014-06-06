@@ -58,7 +58,7 @@ double distance(pos* a, pos* b) {
 }
 
 
-int coloring(int vertex, int *neighs, int n_cnt)
+int coloring(int v, int *neighs, int n_cnt)
 {
 	int c = 0, w;
 	int *neighs_cols;
@@ -80,17 +80,17 @@ int coloring(int vertex, int *neighs, int n_cnt)
 		for (i = 0; i < n_cnt; i++)
 			//neighs_cols[i] = receive from neighs[i]
 		
-		if ((w = distinct_color(v, neighs_cols, n_cnt) >= 0 && neighs[w] <= vertex)
-			v = 0;
+		if ((w = distinct_color(c, neighs_cols, n_cnt) >= 0 && neighs[w] <= v)
+			c = 0;
 	}
 }
 
-int distinct_color(int v, int *cols, int n_cnt)
+int distinct_color(int c, int *neighs_cols, int n_cnt)
 {
 	int i;
 
 	for (i = 0; i < n_cnt; i++)
-		if (v == cols[i])
+		if (c == neighs_cols[i])
 			return i;
 	
 	return -1;
