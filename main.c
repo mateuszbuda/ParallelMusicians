@@ -21,21 +21,24 @@ typedef struct {
 	int y;	
 } pos;
 
+int distinct_color(int c, int *neighs_cols, int n_cnt);
+
 void read_file(char* pos_file, pos** positions, int* count) {
 	FILE* file;
 	char buf[LINE_BUF], *token;
 	int i;
 	
 	if( (file = fopen(pos_file, "r")) == NULL) {
-		goto close;
+		ERR("fopen");
 	}
 
 	memset(buf, 0, LINE_BUF);
 	if(fgets(buf, LINE_BUF, file) == NULL) {
 		goto close;
 	}
-	
-	*count = atoi(buf);
+	if(sscanf(buf, "%d", count) < 1){
+		goto close;
+	}
 
 	if( (*positions = calloc(*count, sizeof(pos))) == NULL) {
 		ERR("calloc");
@@ -80,9 +83,10 @@ int coloring(int v, int *neighs, int n_cnt)
 		for (i = 0; i < n_cnt; i++)
 			//neighs_cols[i] = receive from neighs[i]
 		
-		if ((w = distinct_color(c, neighs_cols, n_cnt) >= 0 && neighs[w] <= v)
+		if ((w = distinct_color(c, neighs_cols, n_cnt) >= 0 && neighs[w] <= v))
 			c = 0;
 	}
+	return 0;
 }
 
 int distinct_color(int c, int *neighs_cols, int n_cnt)
@@ -97,11 +101,11 @@ int distinct_color(int c, int *neighs_cols, int n_cnt)
 }
 
 int main(int argc, char* argv[]) {
-	int rank, size, i, j, k, l, total, neighbours;
+	int rank, size, i, j, k, l, total, neighbors_count;
 	pos* position;
 	int count;
 	double dist;
-	int* index, *edges;
+	int* index, *edges, *neighbors = NULL;
 
 	read_file(argv[2], &position, &count);
 
@@ -149,11 +153,16 @@ int main(int argc, char* argv[]) {
 	MPI_Graph_create(MPI_COMM_WORLD, count, index, edges, 0, &graph_comm);
 	MPI_Comm_rank(graph_comm, &rank);
 	
-	MPI_Graph_neighbors_count(graph_comm, rank, &neighbours);
+	MPI_Graph_neighbors_count(graph_comm, rank, &neighbors_count);
 	
-	//int round = coloring(rank, neighbours, neighbours_count)
+	if((neighbors = (int*)calloc(neighbors_count, sizeof(int))) == NULL)
+		ERR("calloc");	
 	
-	for (i = 1; i <= neighbours; i++)
+	MPI_Graph_neighbors(graph_comm, rank, neighbors_count, neighbors);
+	
+	int round = coloring(rank, neighbors, neighbors_count);
+	
+	for (i = 1; i <= neighbors_count; i++)
 	{
 		if (round == i)
 			printf("Jankiel#%d is playing his wonderful song!\n", rank);
