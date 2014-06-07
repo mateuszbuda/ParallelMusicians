@@ -66,7 +66,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 {
 	int c = 0, w;
 	int *neighs_cols;
-	int i, k = 0, played = 0;
+	int i, k = 0;
 	MPI_Request req;
 	
 	if (0 == n_cnt) {
@@ -77,12 +77,14 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 	srand(time(0));
 	neighs_cols = (int *) calloc(n_cnt, sizeof(int));
 	
-	while (k++ < n_cnt)
+	while (k++ <= n_cnt)
 	{
+		// wybór rundy
 		if (!c) {
 			c = first_fit(neighs_cols, n_cnt);
 		}
 		
+		// wymiana informacji o propozycjiach wybranych rund
 		for (i = 0; i < n_cnt; i++) {
 			//send c to neighs[i];
 			MPI_Isend(&c, 1, MPI_INT, neighs[i], 1, comm, &req);
@@ -93,16 +95,64 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 1, comm, MPI_STATUS_IGNORE);
 		}
 		
+		// weryfikacja wybranej rundy
 		if ((w = distinct_color(c, neighs_cols, n_cnt) >= 0 && neighs[w] <= v)) {
 			c = 0;
 		}
-		else if(!played) {
-			// play
+		
+		// wymiana informacji o ostatecznym wyborze rund
+		for (i = 0; i < n_cnt; i++) {
+			//send c to neighs[i];
+			MPI_Isend(&c, 1, MPI_INT, neighs[i], 1, comm, &req);
+		}
+		
+		for (i = 0; i < n_cnt; i++) {
+			//neighs_cols[i] = receive from neighs[i]
+			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 1, comm, MPI_STATUS_IGNORE);
+		}
+		
+		// odłączenie sąsiadów, którzy zostali wybrani i zagrają w aktualnej rundzie
+		n_cnt = update_neighs(&neighs, &neighs_cols, n_cnt);
+		
+		// gra
+		if(c) {
 			printf("%d playing!\n", v);
-			played = 1;
+			// sleep(2);
+			return;
 		}
 	}
 	return;
+}
+
+int update_neighs(int **neighs, int **neighs_cols, int n_cnt)
+{
+	int i, j;
+	int new_n_cnt = 0;
+	int *tmp_neighs, *tmp_neighs_cols;
+	
+	for (i = 0; i < n_cnt; i++)
+		if ((*neighs_cols)[i])
+			++new_n_cnt;
+	
+	tmp_neighs = *neighs;
+	tmp_neighs_cols = *neighs_cols;
+	
+	(*neighs) = (int *) calloc(new_n_cnt, sizeof(int));
+	(*neighs_cols) = (int *) calloc(new_n_cnt, sizeof(int));
+	
+	j = 0;
+	for (i = 0; i < n_cnt; i++)
+		if ((*tmp_neighs_cols)[i])
+		{
+			(*neighs)[j] = tmp_neighs[i];
+			(*neighs_cols)[j] = tmp_neighs_cols[i];
+			j++;
+		}
+	
+	free(tmp_neighs);
+	free(tmp_neighs_cols);
+	
+	return new_n_cnt;
 }
 
 int first_fit(int *neighs_cols, int n_cnt)
