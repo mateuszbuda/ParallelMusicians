@@ -58,11 +58,11 @@ double distance(pos* a, pos* b) {
 }
 
 
-int coloring(int v, int *neighs, int n_cnt)
+void playing(int v, int *neighs, int n_cnt)
 {
 	int c = 0, w;
 	int *neighs_cols;
-	int i;
+	int i, k = 0;
 	
 	if (0 == n_cnt)
 		return 1;
@@ -70,9 +70,10 @@ int coloring(int v, int *neighs, int n_cnt)
 	srand(time(0));
 	neighs_cols = (int *) calloc(n_cnt, sizeof(int));
 	
-	while (!c)
+	while (k < n_cnt)
 	{
-		c = 1 + (rand() % (n_cnt + 1));
+		if (!c)
+			c = first_fit(neighs_cols, n_cnt);
 		
 		for (i = 0; i < n_cnt; i++)
 			//send c to neighs[i];
@@ -82,7 +83,21 @@ int coloring(int v, int *neighs, int n_cnt)
 		
 		if ((w = distinct_color(c, neighs_cols, n_cnt) >= 0 && neighs[w] <= v)
 			c = 0;
+		else
+			// play
 	}
+}
+
+int first_fit(int *neighs_cols, int n_cnt)
+{
+	int max = 0;
+	int i;
+	
+	for (i = 0; i < n_cnt; i++)
+		if (neighs_cols[i] > max)
+			max = neighs_cols[i];
+	
+	return max + 1;
 }
 
 int distinct_color(int c, int *neighs_cols, int n_cnt)
@@ -151,15 +166,7 @@ int main(int argc, char* argv[]) {
 	
 	MPI_Graph_neighbors_count(graph_comm, rank, &neighbours);
 	
-	//int round = coloring(rank, neighbours, neighbours_count)
-	
-	for (i = 1; i <= neighbours; i++)
-	{
-		if (round == i)
-			printf("Jankiel#%d is playing his wonderful song!\n", rank);
-
-		MPI_Barrier(MPI_COMM_WORLD);
-	}
+	playing(rank, neighbours, neighbours_count)
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 	if(rank == 0) {
