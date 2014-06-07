@@ -132,7 +132,7 @@ int update_neighs(int **neighs, int **neighs_cols, int n_cnt)
 	int *tmp_neighs, *tmp_neighs_cols;
 	
 	for (i = 0; i < n_cnt; i++)
-		if ((*neighs_cols)[i])
+		if (!(*neighs_cols)[i])
 			++new_n_cnt;
 	
 	tmp_neighs = *neighs;
@@ -143,7 +143,7 @@ int update_neighs(int **neighs, int **neighs_cols, int n_cnt)
 	
 	j = 0;
 	for (i = 0; i < n_cnt; i++)
-		if (tmp_neighs_cols[i])
+		if (!tmp_neighs_cols[i])
 		{
 			(*neighs)[j] = tmp_neighs[i];
 			(*neighs_cols)[j] = tmp_neighs_cols[i];
