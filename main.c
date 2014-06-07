@@ -67,7 +67,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 {
 	int c = 0, w;
 	int *neighs_cols;
-	int i, k = 0;
+	int i, k = 0, n = n_cnt;
 	MPI_Request req;
 	
 	if (0 == n_cnt) {
@@ -78,7 +78,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 	srand(time(0));
 	neighs_cols = (int *) calloc(n_cnt, sizeof(int));
 	
-	while (k++ <= n_cnt)
+	while (k++ <= n)
 	{
 		// wybór rundy
 		if (!c) {
