@@ -61,7 +61,7 @@ double distance(pos* a, pos* b) {
 }
 
 
-void playing(int v, int *neighs, int n_cnt)
+void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 {
 	int c = 0, w;
 	int *neighs_cols;
@@ -75,19 +75,27 @@ void playing(int v, int *neighs, int n_cnt)
 	
 	while (k < n_cnt)
 	{
-		if (!c)
+		if (!c) {
 			c = first_fit(neighs_cols, n_cnt);
+		}
 		
-		for (i = 0; i < n_cnt; i++)
+		for (i = 0; i < n_cnt; i++) {
 			//send c to neighs[i];
+			MPI_ISend(&c, 1, MPI_INT, neighs[i], 1, comm);
+		}
 		
-		for (i = 0; i < n_cnt; i++)
+		for (i = 0; i < n_cnt; i++) {
 			//neighs_cols[i] = receive from neighs[i]
+			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 1, comm, MPI_STATUS_IGNORE);
+		}
 		
-		if ((w = distinct_color(c, neighs_cols, n_cnt) >= 0 && neighs[w] <= v))
+		if ((w = distinct_color(c, neighs_cols, n_cnt) >= 0 && neighs[w] <= v)) {
 			c = 0;
-		else
+		}
+		else {
 			// play
+			printf("%d playing!\n", v)
+		}
 	}
 	return 0;
 }
