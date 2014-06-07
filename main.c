@@ -66,7 +66,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 {
 	int c = 0, w;
 	int *neighs_cols;
-	int i, k = 0;
+	int i, k = 0, played = 0;
 	MPI_Request req;
 	
 	if (0 == n_cnt) {
@@ -77,7 +77,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 	srand(time(0));
 	neighs_cols = (int *) calloc(n_cnt, sizeof(int));
 	
-	while (k < n_cnt)
+	while (k++ < n_cnt)
 	{
 		if (!c) {
 			c = first_fit(neighs_cols, n_cnt);
@@ -96,9 +96,10 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 		if ((w = distinct_color(c, neighs_cols, n_cnt) >= 0 && neighs[w] <= v)) {
 			c = 0;
 		}
-		else {
+		else if(!played) {
 			// play
 			printf("%d playing!\n", v);
+			played = 1;
 		}
 	}
 	return;
