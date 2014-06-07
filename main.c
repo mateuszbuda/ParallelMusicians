@@ -22,6 +22,7 @@ typedef struct {
 } pos;
 
 int distinct_color(int c, int *neighs_cols, int n_cnt);
+int first_fit(int *neighs_cols, int n_cnt);
 
 void read_file(char* pos_file, pos** positions, int* count) {
 	FILE* file;
@@ -66,9 +67,12 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 	int c = 0, w;
 	int *neighs_cols;
 	int i, k = 0;
+	MPI_Request req;
 	
-	if (0 == n_cnt)
-		return 1;
+	if (0 == n_cnt) {
+		printf("%d playing!\n", v);
+		return;
+	}
 
 	srand(time(0));
 	neighs_cols = (int *) calloc(n_cnt, sizeof(int));
@@ -81,7 +85,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 		
 		for (i = 0; i < n_cnt; i++) {
 			//send c to neighs[i];
-			MPI_ISend(&c, 1, MPI_INT, neighs[i], 1, comm);
+			MPI_Isend(&c, 1, MPI_INT, neighs[i], 1, comm, &req);
 		}
 		
 		for (i = 0; i < n_cnt; i++) {
@@ -94,10 +98,10 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 		}
 		else {
 			// play
-			printf("%d playing!\n", v)
+			printf("%d playing!\n", v);
 		}
 	}
-	return 0;
+	return;
 }
 
 int first_fit(int *neighs_cols, int n_cnt)
@@ -183,7 +187,7 @@ int main(int argc, char* argv[]) {
 	
 	MPI_Graph_neighbors(graph_comm, rank, neighbors_count, neighbors);
 
-	playing(rank, neighbours, neighbours_count)
+	playing(rank, neighbors, neighbors_count, graph_comm);
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 	if(rank == 0) {
