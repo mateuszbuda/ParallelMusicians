@@ -21,6 +21,7 @@ typedef struct {
 	int y;	
 } pos;
 
+int update_neighs(int **neighs, int **neighs_cols, int n_cnt);
 int distinct_color(int c, int *neighs_cols, int n_cnt);
 int first_fit(int *neighs_cols, int n_cnt);
 
@@ -142,7 +143,7 @@ int update_neighs(int **neighs, int **neighs_cols, int n_cnt)
 	
 	j = 0;
 	for (i = 0; i < n_cnt; i++)
-		if ((*tmp_neighs_cols)[i])
+		if (tmp_neighs_cols[i])
 		{
 			(*neighs)[j] = tmp_neighs[i];
 			(*neighs_cols)[j] = tmp_neighs_cols[i];
