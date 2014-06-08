@@ -15,6 +15,7 @@
 
 #define LINE_BUF 64
 #define HEAR_DISTANCE 3.0
+#define MAX_BRANCHING 28
 
 typedef struct {
 	int x;
@@ -77,14 +78,14 @@ int coloring(int v, int *neighs, int n_cnt, MPI_Comm comm)
 	srand(time(0));
 	neighs_cols = (int *) calloc(n_cnt, sizeof(int));
 	
-	while (k++ <= 28)
+	while (k++ <= MAX_BRANCHING)
 	{
 		// wybór rundy
 		if (!c) {
 			c = first_fit(neighs_cols, n_cnt);
 		}
 		
-		// wymiana informacji o propozycjiach wybranych rund
+		// wymiana informacji o propozycjach wybranych rund
 		for (i = 0; i < n_cnt; i++) {
 			MPI_Isend(&c, 1, MPI_INT, neighs[i], 1, comm, &req);
 		}
@@ -97,6 +98,7 @@ int coloring(int v, int *neighs, int n_cnt, MPI_Comm comm)
 		if ((w = distinct_color(c, neighs_cols, n_cnt)) >= 0 && neighs[w] <= v)
 			c = 0;	
 		
+		// wymiana informacji o ostatecznym wyborze rund
 		for (i = 0; i < n_cnt; i++) {
 			MPI_Isend(&c, 1, MPI_INT, neighs[i], 2, comm, &req);
 		}
@@ -167,11 +169,10 @@ int main(int argc, char* argv[]) {
 	
 	k = 0;
 	l = 0; total = 0;
-	for(i = 0; i < count; ++i) { //printf("(%d, %d)\n", position[i].x, position[i].y);
+	for(i = 0; i < count; ++i) {
 		for(j = 0; j < count; ++j) {
 			if(j != i) {
 				dist = distance(&position[i], &position[j]);
-				//printf("\t d( (%d, %d), (%d, %d) ) = %f\n", position[i].x, position[i].y, position[j].x, position[j].y, dist);
 				if(dist <= HEAR_DISTANCE) {
 					edges[k++] = j;
 					++total;
@@ -186,20 +187,7 @@ int main(int argc, char* argv[]) {
 	MPI_Init( &argc, &argv );
 	MPI_Comm_rank( MPI_COMM_WORLD, &rank );
 	MPI_Comm_size( MPI_COMM_WORLD, &size );
-	/*if(rank == 0) {
-		for(i = 0; i < count; ++i) {
-			printf("index[%d] = %d\n", i, index[i]);
-		}	
-	
-		printf("-----------------------\n");
-		for(i = 0, j = 1, k = 0; i < count * (count - 1); ++i, ++j) {
-			printf("edges[%d] = %d\n", i, edges[i]);
-			if(j == index[k]) {
-				printf("-----------------------\n");
-				++k;
-			}
-		}
-	}*/
+
 	MPI_Graph_create(MPI_COMM_WORLD, count, index, edges, 0, &graph_comm);
 	MPI_Comm_rank(graph_comm, &rank);
 	MPI_Comm_size(graph_comm, &size);
@@ -210,13 +198,14 @@ int main(int argc, char* argv[]) {
 		ERR("calloc");	
 	
 	MPI_Graph_neighbors(graph_comm, rank, neighbors_count, neighbors);
+	
+	printf("%d: x = %d, y = %d\n", rank, position[rank].x, position[rank].y);
 
-	//printf("traaalalalala\n");
 	c = coloring(rank, neighbors, neighbors_count, graph_comm);
 	MPI_Barrier(graph_comm);
 	
 	// granie w rundach
-	for (i = 0; i <= 28; i++)
+	for (i = 0; i <= MAX_BRANCHING; i++)
 	{
 		if (i == c)
 		{
