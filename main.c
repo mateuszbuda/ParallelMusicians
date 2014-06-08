@@ -121,9 +121,6 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 2, comm, MPI_STATUS_IGNORE);
 		}
 		
-		// odłączenie sąsiadów, którzy zostali wybrani i zagrają w aktualnej rundzie
-		n_cnt = update_neighs(&neighs, &neighs_cols, n_cnt);
-		
 		if (!c)
 		{
 			w = 1;
@@ -133,6 +130,20 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 			if (w)
 				c = 1;
 		}
+		
+		// wymiana informacji o dodatkowych wierzchołakach, które jednak mogą grać
+		for (i = 0; i < n_cnt; i++) {
+			//send c to neighs[i];
+			MPI_Isend(&c, 1, MPI_INT, neighs[i], 2, comm, &req);
+		}
+		
+		for (i = 0; i < n_cnt; i++) {
+			//neighs_cols[i] = receive from neighs[i]
+			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 2, comm, MPI_STATUS_IGNORE);
+		}
+		
+		// odłączenie sąsiadów, którzy zostali wybrani i zagrają w aktualnej rundzie
+		n_cnt = update_neighs(&neighs, &neighs_cols, n_cnt);
 		
 		// gra
 		if(c) {
