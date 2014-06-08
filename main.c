@@ -82,7 +82,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 	{
 		// wybór rundy
 		if (!c) {
-			c = first_fit(neighs_cols, n_cnt);
+			c = 1;// first_fit(neighs_cols, n_cnt);
 		}
 		
 		// wymiana informacji o propozycjiach wybranych rund
@@ -95,21 +95,30 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 			//neighs_cols[i] = receive from neighs[i]
 			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 1, comm, MPI_STATUS_IGNORE);
 		}
-		
+
+
+		printf("rank: %d, iteracja: %d, c przed ifem: %d\n", v, k-1, c);
 		// weryfikacja wybranej rundy
 		if ((w = distinct_color(c, neighs_cols, n_cnt) >= 0 && neighs[w] <= v)) {
+			printf("iteracja: %d, rank: %d, w: %d, neighs[w] = %d\n",k-1, v, w, neighs[w]);
 			c = 0;
 		}
+	
+		printf("rank: %d\n, iteracja: %d", v, k);
+		for(i = 0; i < n_cnt; ++i) {
+			printf("\t neighs[%d] = %d, neighs_cols[%d] = %d\n", i, neighs[i], i, neighs_cols[i]);
+		}
+		printf("iteracja: %d, rank: %d, color: %d\n", k-1, v, c);
 		
 		// wymiana informacji o ostatecznym wyborze rund
 		for (i = 0; i < n_cnt; i++) {
 			//send c to neighs[i];
-			MPI_Isend(&c, 1, MPI_INT, neighs[i], 1, comm, &req);
+			MPI_Isend(&c, 1, MPI_INT, neighs[i], 2, comm, &req);
 		}
 		
 		for (i = 0; i < n_cnt; i++) {
 			//neighs_cols[i] = receive from neighs[i]
-			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 1, comm, MPI_STATUS_IGNORE);
+			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 2, comm, MPI_STATUS_IGNORE);
 		}
 		
 		// odłączenie sąsiadów, którzy zostali wybrani i zagrają w aktualnej rundzie
@@ -118,7 +127,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 		// gra
 		if(c) {
 			printf("%d playing!\n", v);
-			// sleep(2);
+			sleep(2);
 			return;
 		}
 	}
@@ -161,6 +170,7 @@ int first_fit(int *neighs_cols, int n_cnt)
 	int max = 0;
 	int i;
 	
+	return 1;
 	for (i = 0; i < n_cnt; i++)
 		if (neighs_cols[i] > max)
 			max = neighs_cols[i];
@@ -197,7 +207,8 @@ int main(int argc, char* argv[]) {
 	}
 	
 	k = 0;
-	l = 0; total = 0; for(i = 0; i < count; ++i) { printf("(%d, %d)\n", position[i].x, position[i].y);
+	l = 0; total = 0;
+	for(i = 0; i < count; ++i) { printf("(%d, %d)\n", position[i].x, position[i].y);
 		for(j = 0; j < count; ++j) {
 			if(j != i) {
 				dist = distance(&position[i], &position[j]);
@@ -211,24 +222,25 @@ int main(int argc, char* argv[]) {
 		index[l++] = total;
 	}
 	
-	for(i = 0; i < count; ++i) {
-		printf("index[%d] = %d\n", i, index[i]);
-	}	
-	
-	printf("-----------------------\n");
-	for(i = 0, j = 1, k = 0; i < count * (count - 1); ++i, ++j) {
-		printf("edges[%d] = %d\n", i, edges[i]);
-		if(j == index[k]) {
-			printf("-----------------------\n");
-			++k;
-		}
-	}
 	MPI_Comm graph_comm;
 	/* Initialize the environment */
 	MPI_Init( &argc, &argv );
 	MPI_Comm_rank( MPI_COMM_WORLD, &rank );
 	MPI_Comm_size( MPI_COMM_WORLD, &size );
-
+	if(rank == 0) {
+		for(i = 0; i < count; ++i) {
+			printf("index[%d] = %d\n", i, index[i]);
+		}	
+	
+		printf("-----------------------\n");
+		for(i = 0, j = 1, k = 0; i < count * (count - 1); ++i, ++j) {
+			printf("edges[%d] = %d\n", i, edges[i]);
+			if(j == index[k]) {
+				printf("-----------------------\n");
+				++k;
+			}
+		}
+	}
 	MPI_Graph_create(MPI_COMM_WORLD, count, index, edges, 0, &graph_comm);
 	MPI_Comm_rank(graph_comm, &rank);
 	
@@ -239,12 +251,18 @@ int main(int argc, char* argv[]) {
 	
 	MPI_Graph_neighbors(graph_comm, rank, neighbors_count, neighbors);
 
+	printf("traaalalalala\n");
 	playing(rank, neighbors, neighbors_count, graph_comm);
-	
+
+	printf("Jankiel#%d zakonczyl koncert!\n", rank);
 	MPI_Barrier(MPI_COMM_WORLD);
 	if(rank == 0) {
-		printf("All done!\n");
+		printf("Wszyscy zakonczyli!\n");
 	}
+
+	free(position);	
+	free(index);
+	free(edges);
 	MPI_Finalize();
 	return 0;
 }
