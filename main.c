@@ -124,9 +124,18 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 		// odłączenie sąsiadów, którzy zostali wybrani i zagrają w aktualnej rundzie
 		n_cnt = update_neighs(&neighs, &neighs_cols, n_cnt);
 		
+		if (!c)
+		{
+			w = 1;
+			for (i = 0; i < n_cnt; i++)
+				if (neighs_cols[i])
+					w = 0;
+			if (w)
+				c = 1;
+		}
+		
 		// gra
 		if(c) {
-			
 			printf("runda: %d, %d gra!\n", k-1, v);
 			sleep(2);
 			return;
