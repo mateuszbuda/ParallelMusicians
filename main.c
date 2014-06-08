@@ -86,28 +86,32 @@ int coloring(int v, int *neighs, int n_cnt, MPI_Comm comm)
 		
 		// wymiana informacji o propozycjiach wybranych rund
 		for (i = 0; i < n_cnt; i++) {
-			//send c to neighs[i];
 			MPI_Isend(&c, 1, MPI_INT, neighs[i], 1, comm, &req);
 		}
 		
 		for (i = 0; i < n_cnt; i++) {
-			//neighs_cols[i] = receive from neighs[i]
 			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 1, comm, MPI_STATUS_IGNORE);
 		}
 
 		// weryfikacja wybranej rundy
 		if ((w = distinct_color(c, neighs_cols, n_cnt)) >= 0 && neighs[w] <= v)
-			c = 0;
+			c = 0;	
 		
-		if (c && all_done(neighs_cols, n_cnt))
-			return c;
+		for (i = 0; i < n_cnt; i++) {
+			MPI_Isend(&c, 1, MPI_INT, neighs[i], 2, comm, &req);
+		}
+
+		for (i = 0; i < n_cnt; i++) {
+			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 2, comm, MPI_STATUS_IGNORE);
+		}
 	}
-	return;
+
+	return c;
 }
 
 int all_done(int *neighs_cols, int n_cnt)
 {
-	int i
+	int i;
 	for (i = 0; i < n_cnt; i++)
 		if (!neighs_cols[i])
 			return 0;
@@ -163,11 +167,11 @@ int main(int argc, char* argv[]) {
 	
 	k = 0;
 	l = 0; total = 0;
-	for(i = 0; i < count; ++i) { printf("(%d, %d)\n", position[i].x, position[i].y);
+	for(i = 0; i < count; ++i) { //printf("(%d, %d)\n", position[i].x, position[i].y);
 		for(j = 0; j < count; ++j) {
 			if(j != i) {
 				dist = distance(&position[i], &position[j]);
-				printf("\t d( (%d, %d), (%d, %d) ) = %f\n", position[i].x, position[i].y, position[j].x, position[j].y, dist);
+				//printf("\t d( (%d, %d), (%d, %d) ) = %f\n", position[i].x, position[i].y, position[j].x, position[j].y, dist);
 				if(dist <= HEAR_DISTANCE) {
 					edges[k++] = j;
 					++total;
@@ -182,7 +186,7 @@ int main(int argc, char* argv[]) {
 	MPI_Init( &argc, &argv );
 	MPI_Comm_rank( MPI_COMM_WORLD, &rank );
 	MPI_Comm_size( MPI_COMM_WORLD, &size );
-	if(rank == 0) {
+	/*if(rank == 0) {
 		for(i = 0; i < count; ++i) {
 			printf("index[%d] = %d\n", i, index[i]);
 		}	
@@ -195,7 +199,7 @@ int main(int argc, char* argv[]) {
 				++k;
 			}
 		}
-	}
+	}*/
 	MPI_Graph_create(MPI_COMM_WORLD, count, index, edges, 0, &graph_comm);
 	MPI_Comm_rank(graph_comm, &rank);
 	MPI_Comm_size(graph_comm, &size);
@@ -207,7 +211,7 @@ int main(int argc, char* argv[]) {
 	
 	MPI_Graph_neighbors(graph_comm, rank, neighbors_count, neighbors);
 
-	printf("traaalalalala\n");
+	//printf("traaalalalala\n");
 	c = coloring(rank, neighbors, neighbors_count, graph_comm);
 	MPI_Barrier(graph_comm);
 	
