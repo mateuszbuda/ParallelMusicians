@@ -21,9 +21,9 @@ typedef struct {
 	int y;	
 } pos;
 
-int update_neighs(int **neighs, int **neighs_cols, int n_cnt);
 int distinct_color(int c, int *neighs_cols, int n_cnt);
 int first_fit(int *neighs_cols, int n_cnt);
+int all_done(int *neighs_cols, int n_cnt);
 
 void read_file(char* pos_file, pos** positions, int* count) {
 	FILE* file;
@@ -63,22 +63,21 @@ double distance(pos* a, pos* b) {
 }
 
 
-void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
+int coloring(int v, int *neighs, int n_cnt, MPI_Comm comm)
 {
 	int c = 0, w;
 	int *neighs_cols;
-	int i, k = 0, n = n_cnt;
+	int i, k = 0;
 	MPI_Request req;
 	
 	if (0 == n_cnt) {
-		printf("runda: 0, %d gra!\n", v);
-		return;
+		return 1;
 	}
 
 	srand(time(0));
 	neighs_cols = (int *) calloc(n_cnt, sizeof(int));
 	
-	while (k++ <= n)
+	while (k++ <= 28)
 	{
 		// wybór rundy
 		if (!c) {
@@ -96,106 +95,41 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 1, comm, MPI_STATUS_IGNORE);
 		}
 
-
-		//printf("rank: %d, iteracja: %d, c przed ifem: %d, warunek: %d\n", v, k-1, c, (w = distinct_color(c, neighs_cols, n_cnt) >= 0 && neighs[w] <= v));
 		// weryfikacja wybranej rundy
-		if ((w = distinct_color(c, neighs_cols, n_cnt)) >= 0 && neighs[w] <= v) {
-		//	printf("iteracja: %d, rank: %d, w: %d, neighs[w] = %d\n",k-1, v, w, neighs[w]);
+		if ((w = distinct_color(c, neighs_cols, n_cnt)) >= 0 && neighs[w] <= v)
 			c = 0;
-		}
-	
-//		printf("rank: %d\n, iteracja: %d", v, k);
-//		for(i = 0; i < n_cnt; ++i) {
-//			printf("\t neighs[%d] = %d, neighs_cols[%d] = %d\n", i, neighs[i], i, neighs_cols[i]);
-//		}
-//		printf("iteracja: %d, rank: %d, color: %d\n", k-1, v, c);
 		
-		// wymiana informacji o ostatecznym wyborze rund
-		for (i = 0; i < n_cnt; i++) {
-			//send c to neighs[i];
-			MPI_Isend(&c, 1, MPI_INT, neighs[i], 2, comm, &req);
-		}
-		
-		for (i = 0; i < n_cnt; i++) {
-			//neighs_cols[i] = receive from neighs[i]
-			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 2, comm, MPI_STATUS_IGNORE);
-		}
-		
-		if (!c)
-		{
-			w = 1;
-			for (i = 0; i < n_cnt; i++)
-				if (neighs_cols[i])
-					w = 0;
-			if (w)
-				c = 1;
-		}
-		
-		// wymiana informacji o dodatkowych wierzchołakach, które jednak mogą grać
-		for (i = 0; i < n_cnt; i++) {
-			//send c to neighs[i];
-			MPI_Isend(&c, 1, MPI_INT, neighs[i], 2, comm, &req);
-		}
-		
-		for (i = 0; i < n_cnt; i++) {
-			//neighs_cols[i] = receive from neighs[i]
-			MPI_Recv(&neighs_cols[i], 1, MPI_INT, neighs[i], 2, comm, MPI_STATUS_IGNORE);
-		}
-		
-		// odłączenie sąsiadów, którzy zostali wybrani i zagrają w aktualnej rundzie
-		n_cnt = update_neighs(&neighs, &neighs_cols, n_cnt);
-		
-		// gra
-		if(c) {
-			printf("runda: %d, %d gra!\n", k-1, v);
-			sleep(2);
-			return;
-		}
+		if (c && all_done(neighs_cols, n_cnt))
+			return c;
 	}
 	return;
 }
 
-int update_neighs(int **neighs, int **neighs_cols, int n_cnt)
+int all_done(int *neighs_cols, int n_cnt)
 {
-	int i, j;
-	int new_n_cnt = 0;
-	int *tmp_neighs, *tmp_neighs_cols;
-	
+	int i
 	for (i = 0; i < n_cnt; i++)
-		if (!(*neighs_cols)[i])
-			++new_n_cnt;
-	
-	tmp_neighs = *neighs;
-	tmp_neighs_cols = *neighs_cols;
-	
-	(*neighs) = (int *) calloc(new_n_cnt, sizeof(int));
-	(*neighs_cols) = (int *) calloc(new_n_cnt, sizeof(int));
-	
-	j = 0;
-	for (i = 0; i < n_cnt; i++)
-		if (!tmp_neighs_cols[i])
-		{
-			(*neighs)[j] = tmp_neighs[i];
-			(*neighs_cols)[j] = tmp_neighs_cols[i];
-			j++;
-		}
-	
-	free(tmp_neighs);
-	free(tmp_neighs_cols);
-	
-	return new_n_cnt;
+		if (!neighs_cols[i])
+			return 0;
+	return 1;
 }
 
 int first_fit(int *neighs_cols, int n_cnt)
 {
 	int max = 0;
+	int unused;
 	int i;
 	
 	for (i = 0; i < n_cnt; i++)
 		if (neighs_cols[i] > max)
 			max = neighs_cols[i];
 	
-	return max + 1;
+	for (unused = 1; unused <= max; unused++)
+		for (i = 0; i < n_cnt; i++)
+			if (neighs_cols[i] == unused)
+				i = n_cnt;
+				
+	return unused;
 }
 
 int distinct_color(int c, int *neighs_cols, int n_cnt)
@@ -215,6 +149,7 @@ int main(int argc, char* argv[]) {
 	int count;
 	double dist;
 	int* index, *edges, *neighbors = NULL;
+	int c;
 
 	read_file(argv[2], &position, &count);
 
@@ -273,12 +208,22 @@ int main(int argc, char* argv[]) {
 	MPI_Graph_neighbors(graph_comm, rank, neighbors_count, neighbors);
 
 	printf("traaalalalala\n");
-	playing(rank, neighbors, neighbors_count, graph_comm);
-
-	printf("Jankiel#%d zakonczyl koncert!\n", rank);
+	c = coloring(rank, neighbors, neighbors_count, graph_comm);
+	MPI_Barrier(graph_comm);
+	
+	// granie w rundach
+	for (i = 0; i <= 28; i++)
+	{
+		if (i == c)
+		{
+			printf("runda: %d, %d gra!\n", i, rank);
+			sleep(2);
+			printf("Jankiel#%d zakonczyl koncert!\n", rank);
+		}
+		MPI_Barrier(graph_comm);
+	}
 	
 	MPI_Barrier(graph_comm);
-	MPI_Barrier(MPI_COMM_WORLD);
 	if(rank == 0) {
 		printf("Wszyscy zakonczyli!\n");
 	}
