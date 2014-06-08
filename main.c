@@ -71,7 +71,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 	MPI_Request req;
 	
 	if (0 == n_cnt) {
-		printf("%d playing!\n", v);
+		printf("runda: 0, %d gra!\n", v);
 		return;
 	}
 
@@ -82,7 +82,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 	{
 		// wybór rundy
 		if (!c) {
-			c = 1;// first_fit(neighs_cols, n_cnt);
+			c = first_fit(neighs_cols, n_cnt);
 		}
 		
 		// wymiana informacji o propozycjiach wybranych rund
@@ -127,7 +127,7 @@ void playing(int v, int *neighs, int n_cnt, MPI_Comm comm)
 		// gra
 		if(c) {
 			
-			printf("iteracja: %d, %d playing!\n", k-1, v);
+			printf("runda: %d, %d gra!\n", k-1, v);
 			sleep(2);
 			return;
 		}
@@ -171,7 +171,6 @@ int first_fit(int *neighs_cols, int n_cnt)
 	int max = 0;
 	int i;
 	
-	return 1;
 	for (i = 0; i < n_cnt; i++)
 		if (neighs_cols[i] > max)
 			max = neighs_cols[i];
